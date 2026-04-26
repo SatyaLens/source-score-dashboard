@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live API Data</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f4f4f4; }
+        .status { color: #666; font-size: 0.9em; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Users from API</h1>
+    <p class="status">Last updated: <span id="timestamp">never</span></p>
+    <table id="data-table">
+        <thead>
+            <tr><th>ID</th><th>Name</th><th>Email</th><th>City</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        const API_URL = 'https://jsonplaceholder.typicode.com/users'; // Free test API
+        const REFRESH_MS = 5000; // Fetch every 5 seconds
+
+        async function fetchData() {
+            try {
+                const res = await fetch(API_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                renderTable(data);
+                document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
+            } catch (err) {
+                console.error('Fetch failed:', err);
+                document.getElementById('timestamp').textContent = 'Error: ' + err.message;
+            }
+        }
+
+        function renderTable(users) {
+            const tbody = document.querySelector('#data-table tbody');
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.name}</td>
+                    <td>${u.email}</td>
+                    <td>${u.address?.city || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Initial load + continuous polling
+        // fetchData();
+        // setInterval(fetchData, REFRESH_MS);
+    </script>
+</body>
+</html>
