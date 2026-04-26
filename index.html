@@ -23,15 +23,16 @@
     </table>
 
     <script>
-        const API_URL = 'https://jsonplaceholder.typicode.com/users'; // Free test API
-        const REFRESH_MS = 5000; // Fetch every 5 seconds
+        const API_URL_BASE = 'https://source-score.onrender.com/api/v1/sources';
+        const API_HEADERS = { 'X-API-Key': 'demo-api-key' };
+        const REFRESH_MS = 5000;
 
         async function fetchData() {
             try {
-                const res = await fetch(API_URL);
+                const res = await fetch(API_URL_BASE, { headers: API_HEADERS });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-                renderTable(data);
+                const sources = await res.json();
+                renderTable(sources);
                 document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
             } catch (err) {
                 console.error('Fetch failed:', err);
@@ -39,21 +40,20 @@
             }
         }
 
-        function renderTable(users) {
+        function renderTable(sources) {
             const tbody = document.querySelector('#data-table tbody');
-            tbody.innerHTML = users.map(u => `
+            tbody.innerHTML = sources.map(s => `
                 <tr>
-                    <td>${u.id}</td>
-                    <td>${u.name}</td>
-                    <td>${u.email}</td>
-                    <td>${u.address?.city || '-'}</td>
+                    <td>${s.name}</td>
+                    <td>${s.score}</td>
+                    <td>${s.uri}</td>
+                    <td>${s.tags}</td>
                 </tr>
             `).join('');
         }
 
-        // Initial load + continuous polling
-        // fetchData();
-        // setInterval(fetchData, REFRESH_MS);
+        fetchData();
+        setInterval(fetchData, REFRESH_MS);
     </script>
 </body>
 </html>
