@@ -17,22 +17,35 @@
     <p class="status">Last updated: <span id="timestamp">never</span></p>
     <table id="data-table">
         <thead>
-            <tr><th>Name</th><th>Score</th><th>URL</th><th>Tags</th></tr>
+            <tr><th>Name</th><th>Score</th><th>URL</th><th>Tags</th><th>Actions</th></tr>
         </thead>
         <tbody></tbody>
     </table>
 
     <script>
-        const API_URL_BASE = 'https://source-score.onrender.com/api/v1/sources';
+        const API_BASE = 'https://source-score.onrender.com/api/v1';
+        const API_URL_SOURCES = API_BASE + '/sources';
         const API_HEADERS = { 'X-API-Key': 'demo-api-key' };
         const REFRESH_MS = 5000;
 
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] || ch));
+        }
+
+        async function sha256hex(input) {
+            const enc = new TextEncoder();
+            const data = enc.encode(input || '');
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
         async function fetchData() {
             try {
-                const res = await fetch(API_URL_BASE, { headers: API_HEADERS });
+                const res = await fetch(API_URL_SOURCES, { headers: API_HEADERS });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const sources = await res.json();
-                renderTable(sources);
+                await renderTable(sources);
                 document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
             } catch (err) {
                 console.error('Fetch failed:', err);
@@ -40,16 +53,29 @@
             }
         }
 
-        function renderTable(sources) {
+        async function renderTable(sources) {
             const tbody = document.querySelector('#data-table tbody');
+            if (!Array.isArray(sources)) {
+                tbody.innerHTML = '<tr><td colspan="5">No sources</td></tr>';
+                return;
+            }
             tbody.innerHTML = sources.map(s => `
                 <tr>
-                    <td>${s.name}</td>
-                    <td>${s.score}</td>
-                    <td>${s.uri}</td>
-                    <td>${s.tags}</td>
+                    <td>${escapeHtml(s.name)}</td>
+                    <td>${escapeHtml(s.score)}</td>
+                    <td>${escapeHtml(s.uri)}</td>
+                    <td>${Array.isArray(s.tags) ? escapeHtml(s.tags.join(', ')) : escapeHtml(s.tags)}</td>
+                    <td><button class="view-claims" data-uri="${encodeURIComponent(s.uri || '')}">View claims</button></td>
                 </tr>
             `).join('');
+
+            document.querySelectorAll('.view-claims').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const uri = decodeURIComponent(e.currentTarget.dataset.uri || '');
+                    const digest = await sha256hex(uri);
+                    location.href = `claims.html?source=${digest}`;
+                });
+            });
         }
 
         fetchData();
