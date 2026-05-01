@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claims</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f4f4f4; }
+        .status { color: #666; font-size: 0.9em; margin-top: 10px; }
+        pre { background:#fafafa; padding:10px; border:1px solid #eee; overflow:auto }
+    </style>
+</head>
+<body>
+    <h1>Claims</h1>
+    <p class="status">Source digest: <span id="source-display">loading…</span></p>
+    <table id="claims-table">
+        <thead>
+            <tr><th>Claim</th><th>URL</th><th>Tags</th><th>Actions</th></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <p><button onclick="history.back()">Back</button></p>
+
+    <script>
+        const API_BASE = 'https://source-score.onrender.com/api/v1';
+        const API_HEADERS = { 'X-API-Key': 'demo-api-key' };
+
+        function getParam(name) {
+            return new URLSearchParams(location.search).get(name);
+        }
+
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] || ch));
+        }
+
+        async function sha256hex(input) {
+            const enc = new TextEncoder();
+            const data = enc.encode(input || '');
+            const hash = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        async function fetchClaims() {
+            try {
+                let digest = getParam('source');
+                if (!digest) {
+                    const uri = getParam('uri');
+                    if (!uri) throw new Error('Missing source digest or uri');
+                    digest = await sha256hex(uri);
+                }
+                document.getElementById('source-display').textContent = digest;
+
+                const res = await fetch(`${API_BASE}/source/${encodeURIComponent(digest)}/claims`, { headers: API_HEADERS });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const claims = await res.json();
+                renderClaims(claims);
+            } catch (err) {
+                console.error('Fetch failed:', err);
+                document.getElementById('source-display').textContent = 'Error: ' + err.message;
+                document.querySelector('#claims-table tbody').innerHTML = `<tr><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        function renderClaims(claims) {
+            const tbody = document.querySelector('#claims-table tbody');
+            if (!Array.isArray(claims) || claims.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4">No claims</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = claims.map(c => `
+                <tr>
+                    <td>${escapeHtml(c.text || c.claim || c.content || '')}</td>
+                    <td>${escapeHtml(c.uri || c.claimUri || c.claim_uri || '')}</td>
+                    <td>${Array.isArray(c.tags) ? escapeHtml(c.tags.join(', ')) : escapeHtml(c.tags)}</td>
+                    <td><button class="view-proofs" data-digest="${encodeURIComponent(c.uriDigest || c.uri_digest || c.claimUriDigest || c.claim_uri_digest || '')}" data-uri="${encodeURIComponent(c.uri || c.claimUri || c.claim_uri || '')}">View proofs</button></td>
+                </tr>
+            `).join('');
+
+            document.querySelectorAll('.view-proofs').forEach(btn => btn.addEventListener('click', async (e) => {
+                const digestAttr = decodeURIComponent(e.currentTarget.dataset.digest || '');
+                if (digestAttr) {
+                    location.href = `proofs.html?claim=${encodeURIComponent(digestAttr)}`;
+                    return;
+                }
+                const uri = decodeURIComponent(e.currentTarget.dataset.uri || '');
+                const digest = await sha256hex(uri);
+                location.href = `proofs.html?claim=${digest}`;
+            }));
+        }
+
+        fetchClaims();
+    </script>
+</body>
+</html>
