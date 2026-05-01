@@ -24,6 +24,7 @@ Agent Responsibilities / Conventions
 - When modifying API calls, ensure path components that contain digests are URL-encoded with `encodeURIComponent(digest)`.
 - Always escape user-facing data before inserting into the DOM (the codebase uses an `escapeHtml()` helper pattern).
 - When adding pages, place them alongside the existing HTML files and add a visible navigation path from an existing page.
+- Keep the UI simple and minimalistic.
 
 Run & Test Locally (quick)
 --------------------------

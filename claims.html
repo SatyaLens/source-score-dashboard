@@ -46,7 +46,7 @@
 </head>
 
 <body>
-    <h1>Claims</h1>
+    <h1 id="claims-title">Claims</h1>
     <p class="status">Source digest: <span id="source-display">loading…</span></p>
     <table id="claims-table">
         <thead>
@@ -54,7 +54,8 @@
                 <th>Claim</th>
                 <th>URL</th>
                 <th>Tags</th>
-                <th>Actions</th>
+                <th>Checked</th>
+                <th>Validity</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -74,55 +75,69 @@
             return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
         }
 
-        async function sha256hex(input) {
-            const enc = new TextEncoder();
-            const data = enc.encode(input || '');
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
         async function fetchClaims() {
             try {
                 let digest = getParam('source');
-                if (!digest) {
-                    const uri = getParam('uri');
-                    if (!uri) throw new Error('Missing source digest or uri');
-                    digest = await sha256hex(uri);
-                }
                 document.getElementById('source-display').textContent = digest;
 
                 const res = await fetch(`${API_BASE}/source/${encodeURIComponent(digest)}/claims`, { headers: API_HEADERS });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const claims = await res.json();
+
+                // determine source display name (prefer query param, then response hints)
+                const nameParam = getParam('name');
+                let displayName = nameParam || '';
+                if (!displayName) {
+                    if (claims && claims.sourceName) displayName = claims.sourceName;
+                    else if (Array.isArray(claims) && claims.length) {
+                        const c0 = claims[0];
+                        if (c0) {
+                            displayName = c0.sourceName || (c0.source && c0.source.name) || '';
+                        }
+                    }
+                }
+                const titleText = displayName ? `${displayName} - Claims` : 'Claims';
+                document.getElementById('claims-title').textContent = titleText;
+                document.title = titleText;
                 renderClaims(claims);
             } catch (err) {
                 console.error('Fetch failed:', err);
-                document.getElementById('source-display').textContent = 'Error: ' + err.message;
-                document.querySelector('#claims-table tbody').innerHTML = `<tr><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
             }
+        }
+
+        function getClaimDigest(c) {
+            return c && c.uriDigest;
         }
 
         function renderClaims(claims) {
             const tbody = document.querySelector('#claims-table tbody');
             if (!Array.isArray(claims) || claims.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">No claims</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5">No claims</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = claims.map(c => `
-                <tr>
-                    <td>${escapeHtml(c.text || c.claim || c.content || '')}</td>
-                    <td>${escapeHtml(c.uri || c.claimUri || c.claim_uri || '')}</td>
-                    <td>${Array.isArray(c.tags) ? escapeHtml(c.tags.join(', ')) : escapeHtml(c.tags)}</td>
-                            <td><button class="view-proofs" data-digest="${escapeHtml(c.uriDigest)}" data-uri="${encodeURIComponent(c.uri || c.claimUri || c.claim_uri || '')}">View proofs</button></td>
-                </tr>
-            `).join('');
+            const nameParam = getParam('name') || '';
 
-            document.querySelectorAll('.view-proofs').forEach(btn => btn.addEventListener('click', async (e) => {
-                const digestAttr = e.currentTarget.dataset.digest;
-                location.href = `proofs.html?claim=${encodeURIComponent(digestAttr)}`;
-                return;
-            }));
+            tbody.innerHTML = claims.map(c => {
+                const title = c.title;
+                const uri = c.uri || c.claimUri || c.claim_uri || '';
+                const digestField = getClaimDigest(c);
+                const proofsHref = `proofs.html?claim=${encodeURIComponent(digestField)}${nameParam ? '&name=' + encodeURIComponent(nameParam) : ''}`;
+                const urlCell = uri ? `<a href="${escapeHtml(uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(uri)}</a>` : '';
+                const tagsCell = Array.isArray(c.tags) ? escapeHtml(c.tags.join(', ')) : escapeHtml(c.tags);
+                const checkedCell = (c.checked === undefined) ? '' : escapeHtml(String(c.checked));
+                const validityCell = (c.checked) ? (c.validity === undefined ? '' : escapeHtml(String(c.validity))) : '';
+
+                return `
+                <tr>
+                    <td><a href="${proofsHref}">${escapeHtml(title)}</a></td>
+                    <td>${urlCell}</td>
+                    <td>${tagsCell}</td>
+                    <td>${checkedCell}</td>
+                    <td>${validityCell}</td>
+                </tr>
+            `;
+            }).join('');
         }
 
         fetchClaims();

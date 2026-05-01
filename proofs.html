@@ -1,24 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Proofs</title>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #f4f4f4; }
-        .status { color: #666; font-size: 0.9em; margin-top: 10px; }
-        pre { background:#fafafa; padding:10px; border:1px solid #eee; overflow:auto }
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f4f4;
+        }
+
+        .status {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        pre {
+            background: #fafafa;
+            padding: 10px;
+            border: 1px solid #eee;
+            overflow: auto
+        }
     </style>
 </head>
+
 <body>
-    <h1>Proofs</h1>
+    <h1 id="proofs-title">Proofs</h1>
     <p class="status">Claim digest: <span id="claim-display">loading…</span></p>
     <table id="proofs-table">
         <thead>
-            <tr><th>Proof</th><th>URI</th><th>Provider</th><th>Details</th></tr>
+            <tr>
+                <th>Supports Claim</th>
+                <th>URL</th>
+                <th>Reviewed By</th>
+            </tr>
         </thead>
         <tbody></tbody>
     </table>
@@ -32,54 +68,58 @@
 
         function escapeHtml(str) {
             if (str == null) return '';
-            return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] || ch));
-        }
-
-        async function sha256hex(input) {
-            const enc = new TextEncoder();
-            const data = enc.encode(input || '');
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+            return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
         }
 
         async function fetchProofs() {
             try {
                 let digest = getParam('claim');
-                if (!digest) {
-                    const uri = getParam('uri');
-                    if (!uri) throw new Error('Missing claim digest or uri');
-                    digest = await sha256hex(uri);
-                }
                 document.getElementById('claim-display').textContent = digest;
 
                 const res = await fetch(`${API_BASE}/claim/${encodeURIComponent(digest)}/proofs`, { headers: API_HEADERS });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const proofs = await res.json();
+
+                // Build the page title from query params or response data
+                let claimTitle = getParam('title') || getParam('name') || getParam('claimTitle') || '';
+                if (!claimTitle && Array.isArray(proofs) && proofs.length) {
+                    for (const p of proofs) {
+                        if (p && p.claimTitle) { claimTitle = p.claimTitle; break; }
+                        if (p && p.supportsClaim && typeof p.supportsClaim === 'string') { claimTitle = p.supportsClaim; break; }
+                    }
+                }
+                const pageTitle = claimTitle ? `${claimTitle} - Proofs` : 'Proofs';
+                document.getElementById('proofs-title').textContent = pageTitle;
+                document.title = pageTitle;
+
                 renderProofs(proofs);
             } catch (err) {
                 console.error('Fetch failed:', err);
-                document.getElementById('claim-display').textContent = 'Error: ' + err.message;
-                document.querySelector('#proofs-table tbody').innerHTML = `<tr><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
             }
         }
-
         function renderProofs(proofs) {
             const tbody = document.querySelector('#proofs-table tbody');
             if (!Array.isArray(proofs) || proofs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">No proofs</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3">No proofs</td></tr>';
                 return;
             }
-            tbody.innerHTML = proofs.map(p => `
+            tbody.innerHTML = proofs.map(p => {
+                const support = p && p.supportsClaim;
+                const uri = p && p.uri;
+                const reviewedBy = p && p.reviewedBy;
+                const safeUri = /^https?:\/\//i.test(uri || '') ? uri : '';
+                const urlCell = safeUri ? `<a href="${escapeHtml(safeUri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(safeUri)}</a>` : '';
+                return `
                 <tr>
-                    <td>${escapeHtml(p.title || p.text || p.description || '')}</td>
-                    <td>${escapeHtml(p.uri || p.proofUri || p.resource || '')}</td>
-                    <td>${escapeHtml(p.provider || p.prover || p.source || '')}</td>
-                    <td><pre>${escapeHtml(JSON.stringify(p, null, 2))}</pre></td>
+                    <td>${escapeHtml(support)}</td>
+                    <td>${urlCell}</td>
+                    <td>${escapeHtml(reviewedBy)}</td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
         fetchProofs();
     </script>
 </body>
+
 </html>

@@ -48,7 +48,6 @@
                 <th>Score</th>
                 <th>URL</th>
                 <th>Tags</th>
-                <th>Actions</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -65,13 +64,6 @@
             return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
         }
 
-        async function sha256hex(input) {
-            const enc = new TextEncoder();
-            const data = enc.encode(input || '');
-            const hash = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
         async function fetchData() {
             try {
                 const res = await fetch(API_URL_SOURCES, { headers: API_HEADERS });
@@ -81,33 +73,26 @@
                 document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
             } catch (err) {
                 console.error('Fetch failed:', err);
-                document.getElementById('timestamp').textContent = 'Error: ' + err.message;
             }
         }
 
         async function renderTable(sources) {
             const tbody = document.querySelector('#data-table tbody');
             if (!Array.isArray(sources)) {
-                tbody.innerHTML = '<tr><td colspan="5">No sources</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4">No sources</td></tr>';
                 return;
             }
-            tbody.innerHTML = sources.map(s => `
+            tbody.innerHTML = sources.map(s => {
+                const href = 'claims.html?source=' + encodeURIComponent(s.uriDigest);
+                const sourceLinkHref = s.uri ? escapeHtml(s.uri) : '';
+                return `
                 <tr>
-                    <td>${escapeHtml(s.name)}</td>
+                    <td><a href="${href}">${escapeHtml(s.name)}</a></td>
                     <td>${escapeHtml(s.score)}</td>
-                    <td>${escapeHtml(s.uri)}</td>
+                    <td>${`<a href="${sourceLinkHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.uri)}</a>`}</td>
                     <td>${Array.isArray(s.tags) ? escapeHtml(s.tags.join(', ')) : escapeHtml(s.tags)}</td>
-                            <td><button class="view-claims" data-digest="${encodeURIComponent(s.uriDigest)}" data-uri="${encodeURIComponent(s.uri || '')}">View claims</button></td>
                 </tr>
-            `).join('');
-
-            document.querySelectorAll('.view-claims').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const digestAttr = decodeURIComponent(e.currentTarget.dataset.digest);
-                    location.href = `claims.html?source=${encodeURIComponent(digestAttr)}`;
-                    return;
-                });
-            });
+            `}).join('');
         }
 
         fetchData();
