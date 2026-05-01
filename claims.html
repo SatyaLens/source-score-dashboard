@@ -1,24 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Claims</title>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #f4f4f4; }
-        .status { color: #666; font-size: 0.9em; margin-top: 10px; }
-        pre { background:#fafafa; padding:10px; border:1px solid #eee; overflow:auto }
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f4f4;
+        }
+
+        .status {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        pre {
+            background: #fafafa;
+            padding: 10px;
+            border: 1px solid #eee;
+            overflow: auto
+        }
     </style>
 </head>
+
 <body>
     <h1>Claims</h1>
     <p class="status">Source digest: <span id="source-display">loading…</span></p>
     <table id="claims-table">
         <thead>
-            <tr><th>Claim</th><th>URL</th><th>Tags</th><th>Actions</th></tr>
+            <tr>
+                <th>Claim</th>
+                <th>URL</th>
+                <th>Tags</th>
+                <th>Actions</th>
+            </tr>
         </thead>
         <tbody></tbody>
     </table>
@@ -34,7 +71,7 @@
 
         function escapeHtml(str) {
             if (str == null) return '';
-            return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] || ch));
+            return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
         }
 
         async function sha256hex(input) {
@@ -77,23 +114,19 @@
                     <td>${escapeHtml(c.text || c.claim || c.content || '')}</td>
                     <td>${escapeHtml(c.uri || c.claimUri || c.claim_uri || '')}</td>
                     <td>${Array.isArray(c.tags) ? escapeHtml(c.tags.join(', ')) : escapeHtml(c.tags)}</td>
-                    <td><button class="view-proofs" data-digest="${encodeURIComponent(c.uriDigest || c.uri_digest || c.claimUriDigest || c.claim_uri_digest || '')}" data-uri="${encodeURIComponent(c.uri || c.claimUri || c.claim_uri || '')}">View proofs</button></td>
+                            <td><button class="view-proofs" data-digest="${escapeHtml(c.uriDigest)}" data-uri="${encodeURIComponent(c.uri || c.claimUri || c.claim_uri || '')}">View proofs</button></td>
                 </tr>
             `).join('');
 
             document.querySelectorAll('.view-proofs').forEach(btn => btn.addEventListener('click', async (e) => {
-                const digestAttr = decodeURIComponent(e.currentTarget.dataset.digest || '');
-                if (digestAttr) {
-                    location.href = `proofs.html?claim=${encodeURIComponent(digestAttr)}`;
-                    return;
-                }
-                const uri = decodeURIComponent(e.currentTarget.dataset.uri || '');
-                const digest = await sha256hex(uri);
-                location.href = `proofs.html?claim=${digest}`;
+                const digestAttr = e.currentTarget.dataset.digest;
+                location.href = `proofs.html?claim=${encodeURIComponent(digestAttr)}`;
+                return;
             }));
         }
 
         fetchClaims();
     </script>
 </body>
+
 </html>

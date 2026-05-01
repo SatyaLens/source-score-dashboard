@@ -1,23 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live API Data</title>
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #f4f4f4; }
-        .status { color: #666; font-size: 0.9em; margin-top: 10px; }
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f4f4;
+        }
+
+        .status {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
     </style>
 </head>
+
 <body>
     <h1>Sources</h1>
     <p class="status">Last updated: <span id="timestamp">never</span></p>
     <table id="data-table">
         <thead>
-            <tr><th>Name</th><th>Score</th><th>URL</th><th>Tags</th><th>Actions</th></tr>
+            <tr>
+                <th>Name</th>
+                <th>Score</th>
+                <th>URL</th>
+                <th>Tags</th>
+                <th>Actions</th>
+            </tr>
         </thead>
         <tbody></tbody>
     </table>
@@ -30,7 +62,7 @@
 
         function escapeHtml(str) {
             if (str == null) return '';
-            return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch] || ch));
+            return String(str).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
         }
 
         async function sha256hex(input) {
@@ -65,15 +97,15 @@
                     <td>${escapeHtml(s.score)}</td>
                     <td>${escapeHtml(s.uri)}</td>
                     <td>${Array.isArray(s.tags) ? escapeHtml(s.tags.join(', ')) : escapeHtml(s.tags)}</td>
-                    <td><button class="view-claims" data-uri="${encodeURIComponent(s.uri || '')}">View claims</button></td>
+                            <td><button class="view-claims" data-digest="${encodeURIComponent(s.uriDigest)}" data-uri="${encodeURIComponent(s.uri || '')}">View claims</button></td>
                 </tr>
             `).join('');
 
             document.querySelectorAll('.view-claims').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    const uri = decodeURIComponent(e.currentTarget.dataset.uri || '');
-                    const digest = await sha256hex(uri);
-                    location.href = `claims.html?source=${digest}`;
+                    const digestAttr = decodeURIComponent(e.currentTarget.dataset.digest);
+                    location.href = `claims.html?source=${encodeURIComponent(digestAttr)}`;
+                    return;
                 });
             });
         }
@@ -82,4 +114,5 @@
         setInterval(fetchData, REFRESH_MS);
     </script>
 </body>
+
 </html>
