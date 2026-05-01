@@ -65,6 +65,7 @@
     <script>
         const API_BASE = 'https://source-score.onrender.com/api/v1';
         const API_HEADERS = { 'X-API-Key': 'demo-api-key' };
+        const REFRESH_MS = 5000;
 
         function getParam(name) {
             return new URLSearchParams(location.search).get(name);
@@ -94,9 +95,6 @@
                         }
                     }
                 }
-                const titleText = displayName ? `${displayName} - Claims` : 'Claims';
-                document.getElementById('claims-title').textContent = titleText;
-                document.title = titleText;
                 renderClaims(claims);
             } catch (err) {
                 console.error('Fetch failed:', err);
@@ -128,7 +126,7 @@
 
                 return `
                 <tr>
-                    <td><a href="${proofsHref}">${escapeHtml(title)}</a></td>
+                    <td><a class="proofs-link" data-title="${escapeHtml(title)}" href="${proofsHref}">${escapeHtml(title)}</a></td>
                     <td>${urlCell}</td>
                     <td>${tagsCell}</td>
                     <td>${checkedCell}</td>
@@ -136,9 +134,33 @@
                 </tr>
             `;
             }).join('');
+
+            // Persist clicked claim title to sessionStorage so proofs page can use it for the header
+            document.querySelectorAll('.proofs-link').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    try {
+                        const name = a.dataset.title;
+                        sessionStorage.setItem('claimName', name);
+                    } catch (err) { console.log(err) }
+                });
+            });
         }
 
+        // Set header from sessionStorage if available (session storage used by index page)
+        (function setTitleFromSession() {
+            try {
+                const stored = sessionStorage.getItem('sourceName');
+                if (stored) {
+                    const titleText = `${stored} - Claims`;
+                    const el = document.getElementById('claims-title');
+                    if (el) el.textContent = titleText;
+                    document.title = titleText;
+                }
+            } catch (e) { console.log(err) }
+        })();
+
         fetchClaims();
+        setInterval(fetchClaims, REFRESH_MS);
     </script>
 </body>
 

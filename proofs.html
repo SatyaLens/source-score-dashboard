@@ -63,6 +63,7 @@
     <script>
         const API_BASE = 'https://source-score.onrender.com/api/v1';
         const API_HEADERS = { 'X-API-Key': 'demo-api-key' };
+        const REFRESH_MS = 5000;
 
         function getParam(name) { return new URLSearchParams(location.search).get(name); }
 
@@ -74,24 +75,11 @@
         async function fetchProofs() {
             try {
                 let digest = getParam('claim');
-                document.getElementById('claim-display').textContent = digest;
 
                 const res = await fetch(`${API_BASE}/claim/${encodeURIComponent(digest)}/proofs`, { headers: API_HEADERS });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
                 const proofs = await res.json();
-
-                // Build the page title from query params or response data
-                let claimTitle = getParam('title') || getParam('name') || getParam('claimTitle') || '';
-                if (!claimTitle && Array.isArray(proofs) && proofs.length) {
-                    for (const p of proofs) {
-                        if (p && p.claimTitle) { claimTitle = p.claimTitle; break; }
-                        if (p && p.supportsClaim && typeof p.supportsClaim === 'string') { claimTitle = p.supportsClaim; break; }
-                    }
-                }
-                const pageTitle = claimTitle ? `${claimTitle} - Proofs` : 'Proofs';
-                document.getElementById('proofs-title').textContent = pageTitle;
-                document.title = pageTitle;
-
                 renderProofs(proofs);
             } catch (err) {
                 console.error('Fetch failed:', err);
@@ -118,7 +106,21 @@
             `}).join('');
         }
 
+        // If a claim name is stored in sessionStorage, set the header immediately
+        (function setTitleFromSession() {
+            try {
+                const stored = sessionStorage.getItem('claimName');
+                if (stored) {
+                    const titleText = `${stored} - Proofs`;
+                    const el = document.getElementById('proofs-title');
+                    if (el) el.textContent = titleText;
+                    document.title = titleText;
+                }
+            } catch (e) { console.log(err) }
+        })();
+
         fetchProofs();
+        setInterval(fetchProofs, REFRESH_MS);
     </script>
 </body>
 
