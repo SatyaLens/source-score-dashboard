@@ -95,7 +95,8 @@
                         }
                     }
                 }
-                renderClaims(claims);
+                await renderClaims(claims);
+                document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
             } catch (err) {
                 console.error('Fetch failed:', err);
             }
@@ -156,7 +157,8 @@
                     if (el) el.textContent = titleText;
                     document.title = titleText;
                 }
-            } catch (e) { console.log(err) }
+                sessionStorage.removeItem('sourceName');
+            } catch (e) { console.log(e) }
         })();
 
         fetchClaims();
