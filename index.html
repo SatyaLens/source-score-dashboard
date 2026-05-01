@@ -87,12 +87,22 @@
                 const sourceLinkHref = s.uri ? escapeHtml(s.uri) : '';
                 return `
                 <tr>
-                    <td><a href="${href}">${escapeHtml(s.name)}</a></td>
+                    <td><a class="source-link" data-name="${escapeHtml(s.name)}" href="${href}">${escapeHtml(s.name)}</a></td>
                     <td>${escapeHtml(s.score)}</td>
-                    <td>${`<a href="${sourceLinkHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.uri)}</a>`}</td>
+                    <td>${s.uri ? `<a href="${sourceLinkHref}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.uri)}</a>` : ''}</td>
                     <td>${Array.isArray(s.tags) ? escapeHtml(s.tags.join(', ')) : escapeHtml(s.tags)}</td>
                 </tr>
             `}).join('');
+
+            // store selected source name in sessionStorage when a link is clicked
+            document.querySelectorAll('.source-link').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    try {
+                        const name = a.dataset.name;
+                        sessionStorage.setItem('sourceName', name);
+                    } catch (err) { console.log(err) }
+                });
+            });
         }
 
         fetchData();

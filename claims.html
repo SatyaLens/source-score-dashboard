@@ -47,7 +47,7 @@
 
 <body>
     <h1 id="claims-title">Claims</h1>
-    <p class="status">Source digest: <span id="source-display">loading…</span></p>
+    <p class="status">Last updated: <span id="timestamp">never</span></p>
     <table id="claims-table">
         <thead>
             <tr>
@@ -65,6 +65,7 @@
     <script>
         const API_BASE = 'https://source-score.onrender.com/api/v1';
         const API_HEADERS = { 'X-API-Key': 'demo-api-key' };
+        const REFRESH_MS = 5000;
 
         function getParam(name) {
             return new URLSearchParams(location.search).get(name);
@@ -78,8 +79,6 @@
         async function fetchClaims() {
             try {
                 let digest = getParam('source');
-                document.getElementById('source-display').textContent = digest;
-
                 const res = await fetch(`${API_BASE}/source/${encodeURIComponent(digest)}/claims`, { headers: API_HEADERS });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const claims = await res.json();
@@ -96,10 +95,8 @@
                         }
                     }
                 }
-                const titleText = displayName ? `${displayName} - Claims` : 'Claims';
-                document.getElementById('claims-title').textContent = titleText;
-                document.title = titleText;
-                renderClaims(claims);
+                await renderClaims(claims);
+                document.getElementById('timestamp').textContent = new Date().toLocaleTimeString();
             } catch (err) {
                 console.error('Fetch failed:', err);
             }
@@ -130,7 +127,7 @@
 
                 return `
                 <tr>
-                    <td><a href="${proofsHref}">${escapeHtml(title)}</a></td>
+                    <td><a class="proofs-link" data-title="${escapeHtml(title)}" href="${proofsHref}">${escapeHtml(title)}</a></td>
                     <td>${urlCell}</td>
                     <td>${tagsCell}</td>
                     <td>${checkedCell}</td>
@@ -138,9 +135,34 @@
                 </tr>
             `;
             }).join('');
+
+            // Persist clicked claim title to sessionStorage so proofs page can use it for the header
+            document.querySelectorAll('.proofs-link').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    try {
+                        const name = a.dataset.title;
+                        sessionStorage.setItem('claimName', name);
+                    } catch (err) { console.log(err) }
+                });
+            });
         }
 
+        // Set header from sessionStorage if available (session storage used by index page)
+        (function setTitleFromSession() {
+            try {
+                const stored = sessionStorage.getItem('sourceName');
+                if (stored) {
+                    const titleText = `${stored} - Claims`;
+                    const el = document.getElementById('claims-title');
+                    if (el) el.textContent = titleText;
+                    document.title = titleText;
+                }
+                sessionStorage.removeItem('sourceName');
+            } catch (e) { console.log(e) }
+        })();
+
         fetchClaims();
+        setInterval(fetchClaims, REFRESH_MS);
     </script>
 </body>
 
