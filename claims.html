@@ -47,7 +47,7 @@
 
 <body>
     <h1 id="claims-title">Claims</h1>
-    <p class="status">Source digest: <span id="source-display">loading…</span></p>
+    <p class="status">Last updated: <span id="timestamp">never</span></p>
     <table id="claims-table">
         <thead>
             <tr>
@@ -78,8 +78,6 @@
         async function fetchClaims() {
             try {
                 let digest = getParam('source');
-                document.getElementById('source-display').textContent = digest;
-
                 const res = await fetch(`${API_BASE}/source/${encodeURIComponent(digest)}/claims`, { headers: API_HEADERS });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const claims = await res.json();
