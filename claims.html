@@ -53,7 +53,6 @@
             <tr>
                 <th>Claim</th>
                 <th>URL</th>
-                <th>Tags</th>
                 <th>Checked</th>
                 <th>Validity</th>
             </tr>
@@ -109,7 +108,7 @@
         function renderClaims(claims) {
             const tbody = document.querySelector('#claims-table tbody');
             if (!Array.isArray(claims) || claims.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5">No claims</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4">No claims</td></tr>';
                 return;
             }
 
@@ -121,7 +120,6 @@
                 const digestField = getClaimDigest(c);
                 const proofsHref = `proofs.html?claim=${encodeURIComponent(digestField)}${nameParam ? '&name=' + encodeURIComponent(nameParam) : ''}`;
                 const urlCell = uri ? `<a href="${escapeHtml(uri)}" target="_blank" rel="noopener noreferrer">${escapeHtml(uri)}</a>` : '';
-                const tagsCell = Array.isArray(c.tags) ? escapeHtml(c.tags.join(', ')) : escapeHtml(c.tags);
                 const checkedCell = (c.checked === undefined) ? '' : escapeHtml(String(c.checked));
                 const validityCell = (c.checked) ? (c.validity === undefined ? '' : escapeHtml(String(c.validity))) : '';
 
@@ -129,7 +127,6 @@
                 <tr>
                     <td><a class="proofs-link" data-title="${escapeHtml(title)}" href="${proofsHref}">${escapeHtml(title)}</a></td>
                     <td>${urlCell}</td>
-                    <td>${tagsCell}</td>
                     <td>${checkedCell}</td>
                     <td>${validityCell}</td>
                 </tr>
