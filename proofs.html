@@ -108,18 +108,13 @@
         }
 
         // If a claim name is stored in sessionStorage, set the header immediately
-        (function setTitleFromSession() {
-            try {
-                const stored = sessionStorage.getItem('claimName');
-                if (stored) {
-                    const titleText = `${stored} - Proofs`;
-                    const el = document.getElementById('proofs-title');
-                    if (el) el.textContent = titleText;
-                    document.title = titleText;
-                }
+        window.addEventListener('pageshow', (event) => {
+            const name = sessionStorage.getItem('claimName');
+            if (name) {
+                document.getElementById('proofs-title').textContent = `${name} - Proofs`;
                 sessionStorage.removeItem('claimName');
-            } catch (e) { console.log(e) }
-        })();
+            }
+        });
 
         fetchProofs();
         setInterval(fetchProofs, REFRESH_MS);

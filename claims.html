@@ -145,18 +145,13 @@
         }
 
         // Set header from sessionStorage if available (session storage used by index page)
-        (function setTitleFromSession() {
-            try {
-                const stored = sessionStorage.getItem('sourceName');
-                if (stored) {
-                    const titleText = `${stored} - Claims`;
-                    const el = document.getElementById('claims-title');
-                    if (el) el.textContent = titleText;
-                    document.title = titleText;
-                }
+        window.addEventListener('pageshow', (event) => {
+            const name = sessionStorage.getItem('sourceName');
+            if (name) {
+                document.getElementById('claims-title').textContent = `${name} - Claims`;
                 sessionStorage.removeItem('sourceName');
-            } catch (e) { console.log(e) }
-        })();
+            }
+        });
 
         fetchClaims();
         setInterval(fetchClaims, REFRESH_MS);
