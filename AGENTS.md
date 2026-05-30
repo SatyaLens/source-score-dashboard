@@ -2,11 +2,12 @@
 
 Purpose
 -------
-This repository is a small static dashboard that lists "sources", their "claims", and "proofs" by calling the Source Score API. The frontend is implemented with plain HTML + inline JavaScript in these files:
+This repository is a small static dashboard that lists "sources", their "claims", and "proofs" by calling the Source Score API. The frontend is implemented with plain HTML + JavaScript in these files:
 
 - index.html
 - claims.html
 - proofs.html
+- auth.js
 
 This document tells automated agents (and human contributors) how to make safe, targeted changes, how to run and test the site locally, and which best practices to follow.
 
@@ -23,6 +24,7 @@ Agent Responsibilities / Conventions
 - Update this file and the TODO list (`manage_todo_list`) when you change behavior or add pages.
 - When modifying API calls, ensure path components that contain digests are URL-encoded with `encodeURIComponent(digest)`.
 - Always escape user-facing data before inserting into the DOM (the codebase uses an `escapeHtml()` helper pattern).
+- Keep shared API authentication logic in `auth.js` and call it through `window.SourceScoreAuth`.
 - When adding pages, place them alongside the existing HTML files and add a visible navigation path from an existing page.
 - Keep the UI simple and minimalistic.
 
@@ -44,11 +46,12 @@ python3 -m http.server 8000
 3. Example curl commands (for debugging the API directly):
 
 ```bash
-curl -H "X-API-Key: demo-api-key" "https://source-score.onrender.com/api/v1/sources"
+TOKEN=$(curl -s -X POST -H "Client-ID: web-dashboard" "https://source-score.onrender.com/auth/token" | jq -r .token)
+curl -H "Client-ID: web-dashboard" -H "Authorization: Bearer $TOKEN" "https://source-score.onrender.com/api/v1/sources"
 # compute a digest for a URI in the shell (Linux):
 printf 'https://example.com/path' | sha256sum | cut -d' ' -f1
-curl -H "X-API-Key: demo-api-key" "https://source-score.onrender.com/api/v1/source/<digest>/claims"
-curl -H "X-API-Key: demo-api-key" "https://source-score.onrender.com/api/v1/claim/<digest>/proofs"
+curl -H "Client-ID: web-dashboard" -H "Authorization: Bearer $TOKEN" "https://source-score.onrender.com/api/v1/source/<digest>/claims"
+curl -H "Client-ID: web-dashboard" -H "Authorization: Bearer $TOKEN" "https://source-score.onrender.com/api/v1/claim/<digest>/proofs"
 ```
 
 API Summary
@@ -58,7 +61,10 @@ API Summary
   - `GET /sources`
   - `GET /source/{sourceUriDigest}/claims`
   - `GET /claim/{claimUriDigest}/proofs`
-- Header: `X-API-Key: <key>` (the code uses a `demo-api-key` placeholder).
+- Auth endpoint: `POST https://source-score.onrender.com/auth/token`
+- Headers:
+  - `Client-ID: web-dashboard`
+  - `Authorization: Bearer <jwt>` for API endpoints after fetching the token.
 
 Error Handling and Resilience
 ----------------------------
@@ -102,4 +108,4 @@ Notes
 This repo is intentionally small and straightforward. Agent edits should respect the existing simple architecture and avoid introducing heavyweight build tooling unless the change explicitly requires it.
 
 ---
-Last updated: 2026-05-01
+Last updated: 2026-05-30

@@ -53,10 +53,9 @@
         <tbody></tbody>
     </table>
 
+    <script src="auth.js"></script>
     <script>
-        const API_BASE = 'https://source-score.onrender.com/api/v1';
-        const API_URL_SOURCES = API_BASE + '/sources';
-        const API_HEADERS = { 'X-API-Key': 'demo-api-key' };
+        const API_URL_SOURCES = SourceScoreAuth.apiBase + '/sources';
         const REFRESH_MS = 5000;
 
         function escapeHtml(str) {
@@ -66,7 +65,7 @@
 
         async function fetchData() {
             try {
-                const res = await fetch(API_URL_SOURCES, { headers: API_HEADERS });
+                const res = await fetch(API_URL_SOURCES, { headers: await SourceScoreAuth.getApiHeaders() });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const sources = await res.json();
                 await renderTable(sources);
@@ -96,7 +95,7 @@
 
             // store selected source name in sessionStorage when a link is clicked
             document.querySelectorAll('.source-link').forEach(a => {
-                a.addEventListener('click', (e) => {
+                a.addEventListener('click', (e) => {SourceScoreAuth
                     try {
                         const name = a.dataset.name;
                         sessionStorage.setItem('sourceName', name);
