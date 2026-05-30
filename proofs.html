@@ -75,8 +75,21 @@
         async function fetchProofs() {
             try {
                 let digest = getParam('claim');
+                if (!digest) {
+                    document.querySelector('#proofs-table tbody').innerHTML = '<tr><td colspan="3">Missing claim</td></tr>';
+                    return;
+                }
 
-                const res = await fetch(`${API_BASE}/claim/${encodeURIComponent(digest)}/proofs`, { headers: await SourceScoreAuth.getApiHeaders() });
+                let headers;
+                try {
+                    headers = await SourceScoreAuth.getApiHeaders();
+                } catch (err) {
+                    console.error('Auth error:', err);
+                    document.querySelector('#proofs-table tbody').innerHTML = '<tr><td colspan="3">Authentication failed</td></tr>';
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/claim/${encodeURIComponent(digest)}/proofs`, { headers });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
                 const proofs = await res.json();

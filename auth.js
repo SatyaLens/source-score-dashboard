@@ -1,4 +1,13 @@
 (function () {
+    const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+    const isNode = !isBrowser;
+
+    // Provide minimal Node helpers for unit tests (do not affect browser globals)
+    if (isNode) {
+        if (typeof atob === 'undefined') {
+            global.atob = (b64) => Buffer.from(b64, 'base64').toString('binary');
+        }
+    }
     const API_ORIGIN = 'https://source-score.onrender.com';
     const API_BASE = API_ORIGIN + '/api/v1';
     const AUTH_TOKEN_URL = API_ORIGIN + '/auth/token';
@@ -42,21 +51,39 @@
 
     function getTokenExpiresAt(token) {
         const payload = parseJwtPayload(token);
-        if (!payload || payload.ExpiresAt == null) throw new Error('Token payload missing ExpiresAt');
+        if (!payload) throw new Error('Token payload missing');
 
-        const expiresAt = payload.ExpiresAt;
+        // Accept several common expiry fields: standard 'exp' (seconds),
+        // 'ExpiresAt' or 'expiresAt' (string or number), or 'expires_at'.
+        let expiresAt = null;
+        if (payload.exp != null) {
+            // 'exp' is the standard JWT claim (seconds since epoch)
+            expiresAt = payload.exp;
+        } else if (payload.ExpiresAt != null) {
+            expiresAt = payload.ExpiresAt;
+        } else if (payload.expiresAt != null) {
+            expiresAt = payload.expiresAt;
+        } else if (payload.expires_at != null) {
+            expiresAt = payload.expires_at;
+        }
+
+        if (expiresAt == null) throw new Error('Token payload missing ExpiresAt/exp');
+
+        // Numeric timestamps may be in seconds (<= 1e12) or milliseconds.
         if (typeof expiresAt === 'number') {
             return expiresAt > 1000000000000 ? expiresAt : expiresAt * 1000;
         }
 
+        // Numeric strings
         if (typeof expiresAt === 'string' && /^\d+$/.test(expiresAt)) {
             const numericExpiresAt = Number(expiresAt);
             return numericExpiresAt > 1000000000000 ? numericExpiresAt : numericExpiresAt * 1000;
         }
 
-        const parsedExpiresAt = Date.parse(expiresAt);
-        if (Number.isNaN(parsedExpiresAt)) throw new Error('Token ExpiresAt is invalid');
-        return parsedExpiresAt;
+        // Try parseable date string
+        const parsed = Date.parse(expiresAt);
+        if (Number.isNaN(parsed)) throw new Error('Token ExpiresAt is invalid');
+        return parsed;
     }
 
     function getCachedAuthToken() {
@@ -127,12 +154,22 @@
         };
     }
 
-    scheduleTokenInvalidation(getCachedAuthToken());
+    if (isBrowser) {
+        scheduleTokenInvalidation(getCachedAuthToken());
 
-    window.SourceScoreAuth = {
-        apiBase: API_BASE,
-        getApiHeaders,
-        getAuthToken,
-        invalidateAuthToken
-    };
+        window.SourceScoreAuth = {
+            apiBase: API_BASE,
+            getApiHeaders,
+            getAuthToken,
+            invalidateAuthToken
+        };
+    }
+
+    // Export helpers for Node-based unit tests
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = {
+            parseJwtPayload,
+            getTokenExpiresAt
+        };
+    }
 })();

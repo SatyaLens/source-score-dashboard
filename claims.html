@@ -78,7 +78,21 @@
         async function fetchClaims() {
             try {
                 let digest = getParam('source');
-                const res = await fetch(`${API_BASE}/source/${encodeURIComponent(digest)}/claims`, { headers: await SourceScoreAuth.getApiHeaders() });
+                if (!digest) {
+                    document.querySelector('#claims-table tbody').innerHTML = '<tr><td colspan="4">Missing source</td></tr>';
+                    return;
+                }
+
+                let headers;
+                try {
+                    headers = await SourceScoreAuth.getApiHeaders();
+                } catch (err) {
+                    console.error('Auth error:', err);
+                    document.querySelector('#claims-table tbody').innerHTML = '<tr><td colspan="4">Authentication failed</td></tr>';
+                    return;
+                }
+
+                const res = await fetch(`${API_BASE}/source/${encodeURIComponent(digest)}/claims`, { headers });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const claims = await res.json();
 
