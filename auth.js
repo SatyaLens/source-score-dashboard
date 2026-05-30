@@ -84,7 +84,14 @@
         const expiresAt = getTokenExpiresAt(token);
         if (Date.now() >= expiresAt) throw new Error('Received expired token');
         const cached = { token, expiresAt };
-        localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(cached));
+        try {
+            localStorage.setItem(
+                AUTH_CACHE_KEY,
+                JSON.stringify(cached)
+            );
+        } catch (err) {
+            console.warn('Failed to cache auth token:', err);
+        }
         scheduleTokenInvalidation(cached);
         return token;
     }
@@ -92,7 +99,8 @@
     async function fetchAuthToken() {
         const res = await fetch(AUTH_TOKEN_URL, {
             method: 'POST',
-            headers: { 'Client-ID': CLIENT_ID }
+            headers: { 'Client-ID': CLIENT_ID },
+            signal: AbortSignal.timeout(90000),
         });
         if (!res.ok) throw new Error(`Token HTTP ${res.status}`);
         const data = await res.json();
