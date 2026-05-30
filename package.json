@@ -1,0 +1,11 @@
+{
+  "name": "source-score-dashboard-tests",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/run.js"
+  },
+  "engines": {
+    "node": ">=12"
+  }
+}

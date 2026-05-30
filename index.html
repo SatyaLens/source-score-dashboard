@@ -65,7 +65,16 @@
 
         async function fetchData() {
             try {
-                const res = await fetch(API_URL_SOURCES, { headers: await SourceScoreAuth.getApiHeaders() });
+                let headers;
+                try {
+                    headers = await SourceScoreAuth.getApiHeaders();
+                } catch (err) {
+                    console.error('Auth error:', err);
+                    document.querySelector('#data-table tbody').innerHTML = '<tr><td colspan="4">Authentication failed</td></tr>';
+                    return;
+                }
+
+                const res = await fetch(API_URL_SOURCES, { headers });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const sources = await res.json();
                 await renderTable(sources);
@@ -95,7 +104,7 @@
 
             // store selected source name in sessionStorage when a link is clicked
             document.querySelectorAll('.source-link').forEach(a => {
-                a.addEventListener('click', (e) => {SourceScoreAuth
+                a.addEventListener('click', (e) => {
                     try {
                         const name = a.dataset.name;
                         sessionStorage.setItem('sourceName', name);
